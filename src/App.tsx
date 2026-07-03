@@ -52,19 +52,17 @@ import { parseLegerExcel } from "./utils/parser";
 
 export default function App() {
   // State variables
-  const [students, setStudents] = useState<StudentDetail[]>(DEFAULT_STUDENTS);
-  const [subjects, setSubjects] = useState<string[]>([
-    "PAI", "PPKn", "B.IND", "B.ING", "B.SUN", "MTK", "IPA", "IPS", "PJOK", "SENI", "INF"
-  ]);
-  const [kelasName, setKelasName] = useState<string>(DEFAULT_NAMA_KELAS);
-  const [loadedFileName, setLoadedFileName] = useState<string>(DEFAULT_FILE_NAME);
+  const [students, setStudents] = useState<StudentDetail[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [kelasName, setKelasName] = useState<string>("");
+  const [loadedFileName, setLoadedFileName] = useState<string>("");
   
   // Navigation tabs
   // "profile" | "compare" | "eval" | "cluster" | "sync" | "database"
   const [activeTab, setActiveTab] = useState<string>("profile");
   
   // Tab 1: Profile Selection
-  const [selectedStudentName, setSelectedStudentName] = useState<string>(DEFAULT_STUDENTS[0]?.Nama || "");
+  const [selectedStudentName, setSelectedStudentName] = useState<string>("");
   const [profileAiLoading, setProfileAiLoading] = useState<boolean>(false);
   const [aiProfileResult, setAiProfileResult] = useState<{
     remarks?: string;
@@ -74,8 +72,8 @@ export default function App() {
   } | null>(null);
 
   // Tab 2: Comparison Selection
-  const [student1Name, setStudent1Name] = useState<string>(DEFAULT_STUDENTS[0]?.Nama || "");
-  const [student2Name, setStudent2Name] = useState<string>(DEFAULT_STUDENTS[1]?.Nama || "");
+  const [student1Name, setStudent1Name] = useState<string>("");
+  const [student2Name, setStudent2Name] = useState<string>("");
   const [compareAiLoading, setCompareAiLoading] = useState<boolean>(false);
   const [aiCompareResult, setAiCompareResult] = useState<{
     synergyReport?: string;
@@ -96,13 +94,34 @@ export default function App() {
   const [isAbsensiSynced, setIsAbsensiSynced] = useState<boolean>(false);
   const [isBkSynced, setIsBkSynced] = useState<boolean>(false);
 
+  // Load sample demo function
+  const loadSampleDemo = () => {
+    setStudents(DEFAULT_STUDENTS);
+    setSubjects([
+      "PAI", "PPKn", "B.IND", "B.ING", "B.SUN", "MTK", "IPA", "IPS", "PJOK", "SENI", "INF"
+    ]);
+    setKelasName(DEFAULT_NAMA_KELAS);
+    setLoadedFileName("Demo_Leger_VIII_F.xlsx (Data Sampel)");
+    setSelectedStudentName(DEFAULT_STUDENTS[0]?.Nama || "");
+    setStudent1Name(DEFAULT_STUDENTS[0]?.Nama || "");
+    setStudent2Name(DEFAULT_STUDENTS[1]?.Nama || "");
+    setIsAbsensiSynced(true);
+    setIsBkSynced(true);
+  };
+
   // --- Dynamic Class Averages ---
   const classAverage = parseFloat(
-    (students.reduce((acc, s) => acc + s["Rata-rata"], 0) / students.length).toFixed(2)
+    (students.length > 0 
+      ? (students.reduce((acc, s) => acc + s["Rata-rata"], 0) / students.length) 
+      : 0
+    ).toFixed(2)
   );
   
   const classTrendAverage = parseFloat(
-    (students.reduce((acc, s) => acc + s["Tren_Belajar"], 0) / students.length).toFixed(2)
+    (students.length > 0 
+      ? (students.reduce((acc, s) => acc + s["Tren_Belajar"], 0) / students.length) 
+      : 0
+    ).toFixed(2)
   );
 
   // Get active student details
@@ -437,6 +456,7 @@ export default function App() {
 
   // Calculate High School Career Recommendations scores (Hybrid Intelligence)
   const getCareerRecommendations = (student: StudentDetail) => {
+    if (!student) return [];
     const mtk = student.MTK || 0;
     const ipa = student.IPA || 0;
     const ips = student.IPS || 0;
@@ -523,87 +543,176 @@ export default function App() {
         </div>
 
         {/* Interactive Loaded File / Premium Uploader */}
-        <div className="hidden sm:flex items-center gap-3 bg-slate-50 border border-slate-200/60 p-1 rounded-full pl-3.5 pr-2 shadow-2xs">
-          <div className="flex items-center gap-1.5">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-[11px] font-bold text-slate-600 truncate max-w-[130px]" title={loadedFileName}>
-              {loadedFileName}
-            </span>
+        {loadedFileName ? (
+          <div className="hidden sm:flex items-center gap-3 bg-slate-50 border border-slate-200/60 p-1 rounded-full pl-3.5 pr-2 shadow-2xs">
+            <div className="flex items-center gap-1.5">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-[11px] font-bold text-slate-600 truncate max-w-[130px]" title={loadedFileName}>
+                {loadedFileName}
+              </span>
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer shadow-xs hover:shadow-sm"
+            >
+              <Upload className="w-2.5 h-2.5" />
+              Ganti Leger
+            </button>
           </div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer shadow-xs hover:shadow-sm"
-          >
-            <Upload className="w-2.5 h-2.5" />
-            Ganti Leger
-          </button>
-        </div>
+        ) : (
+          <div className="hidden sm:flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full shadow-3xs animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-amber-700">Menunggu Leger Utama</span>
+          </div>
+        )}
 
         <div className="flex items-center gap-2.5">
           <div className="text-right hidden md:block">
-            <p className="text-xs font-bold text-slate-800">{kelasName}</p>
+            <p className="text-xs font-bold text-slate-800">{kelasName || "Belum Ada Berkas"}</p>
             <p className="text-[9px] text-slate-400 font-medium">SMP Negeri 1 Wanayasa</p>
           </div>
           <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-200">
-            {kelasName.includes("VIII") ? "8F" : "ED"}
+            {kelasName ? (kelasName.includes("VIII") ? "8F" : "ED") : "—"}
           </div>
         </div>
       </header>
 
-      {/* Overview Stat Widgets */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 pt-5 no-print">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Siswa</p>
-            <p className="text-xl font-extrabold text-slate-900">{students.length}</p>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rata-rata Kelas</p>
-            <p className="text-xl font-extrabold text-slate-900">{classAverage}</p>
-          </div>
-        </div>
+      {/* Main Container / Welcome View Condition */}
+      {students.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 md:py-16 max-w-4xl mx-auto w-full">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8 md:p-12 text-center w-full relative overflow-hidden">
+            
+            {/* Background design glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-80 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kecepatan Belajar</p>
-            <p className="text-xl font-extrabold text-slate-900">
-              {classTrendAverage >= 0 ? `+${classTrendAverage}` : classTrendAverage} Poin
+            {/* Icon/Art */}
+            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 relative group">
+              <div className="absolute inset-0 bg-indigo-600 rounded-2xl animate-ping opacity-10 group-hover:opacity-20 transition-opacity"></div>
+              <FileSpreadsheet className="w-8 h-8" />
+            </div>
+
+            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+              Mulai Analisis Leger Kelas Anda
+            </h2>
+            
+            <p className="text-xs md:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed mb-8 font-medium">
+              Sistem asisten Wali Kelas & BK cerdas. Unggah dokumen Leger Nilai Anda untuk mendeteksi profil kelebihan belajar siswa, perbandingan head-to-head, grafik peta kekuatan radar, serta clustering otomatis.
             </p>
-          </div>
-        </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Award className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Status Integrasi</p>
-            <div className="flex gap-1.5 mt-0.5">
-              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${isAbsensiSynced ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                Absen {isAbsensiSynced ? "OK" : "NO"}
-              </span>
-              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${isBkSynced ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-500"}`}>
-                BK {isBkSynced ? "OK" : "NO"}
+            {/* Upload Drag & Drop Zone */}
+            <div
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-2xl p-8 md:p-12 text-center cursor-pointer transition-all duration-300 mb-6 ${
+                dragActive 
+                  ? "border-indigo-500 bg-indigo-50/50 scale-[1.01]" 
+                  : "border-slate-200 hover:border-indigo-400 bg-slate-50 hover:bg-slate-50/70"
+              }`}
+            >
+              <Upload className="w-10 h-10 text-indigo-600 mx-auto mb-4 animate-bounce" />
+              <p className="text-sm font-extrabold text-slate-700 mb-1">
+                Pilih Berkas Leger Rapor Kelas Anda
+              </p>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto mb-3 font-medium">
+                Seret & lepaskan file Excel leger di sini, atau klik untuk menelusuri folder Anda.
+              </p>
+              <span className="text-[10px] bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">
+                Mendukung .xlsx, .xls, .ods, atau .csv
               </span>
             </div>
+
+            {/* Error or Success notification */}
+            {uploadMessage && (
+              <div className={`mb-6 p-4 rounded-xl text-xs font-semibold flex items-start gap-2.5 border text-left ${
+                uploadMessage.type === "success" 
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                  : "bg-rose-50 border-rose-200 text-rose-800"
+              }`}>
+                <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${uploadMessage.type === "success" ? "text-emerald-600" : "text-rose-600"}`} />
+                <div>
+                  <span className="block font-black mb-0.5">
+                    {uploadMessage.type === "success" ? "Berhasil Memproses Berkas" : "Gagal Memuat Berkas"}
+                  </span>
+                  <span className="font-medium opacity-90">{uploadMessage.text}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Premium Demo loader */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-slate-100 pt-8 mt-4">
+              <div className="text-xs text-slate-400 font-bold">
+                Belum memiliki berkas Leger? Silakan coba data simulasi kami:
+              </div>
+              <button
+                onClick={loadSampleDemo}
+                className="px-5 py-2.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-slate-700 hover:text-indigo-600 rounded-xl text-xs font-black transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-3xs"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
+                Gunakan Data Sampel (Demo)
+              </button>
+            </div>
+
           </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Overview Stat Widgets */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 pt-5 no-print">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Siswa</p>
+                <p className="text-xl font-extrabold text-slate-900">{students.length}</p>
+              </div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rata-rata Kelas</p>
+                <p className="text-xl font-extrabold text-slate-900">{classAverage}</p>
+              </div>
+            </div>
 
-      {/* Main Container */}
-      <main className="flex-1 p-6 flex flex-col gap-6 md:pb-24">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kecepatan Belajar</p>
+                <p className="text-xl font-extrabold text-slate-900">
+                  {classTrendAverage >= 0 ? `+${classTrendAverage}` : classTrendAverage} Poin
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Status Integrasi</p>
+                <div className="flex gap-1.5 mt-0.5">
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${isAbsensiSynced ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                    Absen {isAbsensiSynced ? "OK" : "NO"}
+                  </span>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${isBkSynced ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-500"}`}>
+                    BK {isBkSynced ? "OK" : "NO"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Container */}
+          <main className="flex-1 p-6 flex flex-col gap-6 md:pb-24">
         
         {/* TAB NAVIGATION FOR DESKTOP */}
         <div className="flex justify-start border-b border-slate-200 gap-1.5 no-print overflow-x-auto pb-px">
@@ -1486,27 +1595,31 @@ export default function App() {
         </div>
 
       </main>
+        </>
+      )}
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="h-16 bg-white border-t border-slate-200 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around md:hidden no-print shadow-lg">
-        {[
-          { id: "profile", label: "Profil", icon: <User className="w-5 h-5" /> },
-          { id: "compare", label: "Bandingan", icon: <ArrowRightLeft className="w-5 h-5" /> },
-          { id: "cluster", label: "AI Klaster", icon: <Sparkles className="w-5 h-5" /> },
-          { id: "database", label: "Database", icon: <Database className="w-5 h-5" /> }
-        ].map(item => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === item.id ? "text-indigo-600 font-bold" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            {item.icon}
-            <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
-          </button>
-        ))}
-      </nav>
+      {students.length > 0 && (
+        <nav className="h-16 bg-white border-t border-slate-200 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around md:hidden no-print shadow-lg">
+          {[
+            { id: "profile", label: "Profil", icon: <User className="w-5 h-5" /> },
+            { id: "compare", label: "Bandingan", icon: <ArrowRightLeft className="w-5 h-5" /> },
+            { id: "cluster", label: "AI Klaster", icon: <Sparkles className="w-5 h-5" /> },
+            { id: "database", label: "Database", icon: <Database className="w-5 h-5" /> }
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-1 transition-all ${
+                activeTab === item.id ? "text-indigo-600 font-bold" : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              {item.icon}
+              <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* --- OFFLINE / STANDALONE PRINT VERSION OVERLAY FOR WINDOW.PRINT() --- */}
       <div className="hidden print:block p-8 bg-white font-sans text-black select-text">
