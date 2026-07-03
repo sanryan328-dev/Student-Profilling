@@ -1,0 +1,6 @@
+{
+  "name": "Student Profiling Ledger",
+  "description": "Sistem Analisis Profiling Siswa cerdas berbasis AI untuk Rapor Leger Kelas VIII F SMP Negeri 1 Wanayasa, mendukung mobile-first UX, perbandingan siswa, K-Means klasterisasi, dan ekspor data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
