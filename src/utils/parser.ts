@@ -28,11 +28,23 @@ export function parseLegerExcel(arrayBuffer: ArrayBuffer): {
   // Find Kelas Name in first 15 rows
   for (let i = 0; i < Math.min(15, rawData.length); i++) {
     const rowStr = rawData[i].map(c => String(c).toUpperCase()).join(" ");
-    if (rowStr.includes("KELAS") && rowStr.includes(":")) {
-      const parts = rowStr.split(":");
-      if (parts[1]) {
-        kelasName = parts[1].replace("NAN", "").replace(/,/g, "").trim();
-        break;
+    if (rowStr.includes("KELAS")) {
+      if (rowStr.includes(":")) {
+        const parts = rowStr.split(":");
+        if (parts[1]) {
+          kelasName = parts[1].replace("NAN", "").replace(/,/g, "").trim();
+          break;
+        }
+      } else {
+        const rowArr = rawData[i].map(c => String(c).trim());
+        const idx = rowArr.findIndex(c => c.toUpperCase().includes("KELAS"));
+        if (idx !== -1 && rowArr[idx + 1]) {
+          kelasName = rowArr[idx + 1];
+          break;
+        } else if (idx !== -1 && rowArr[idx]) {
+          kelasName = rowArr[idx];
+          break;
+        }
       }
     }
   }
@@ -47,11 +59,11 @@ export function parseLegerExcel(arrayBuffer: ArrayBuffer): {
     }
   }
 
-  // Find Semester Row (containing smt1 or smt 1, etc.)
+  // Find Semester Row
   let smtRowIdx = -1;
   for (let i = headerIdx; i < Math.min(headerIdx + 15, rawData.length); i++) {
     const rowStr = rawData[i].map(c => String(c).toLowerCase());
-    if (rowStr.some(cell => cell.includes("smt1") || cell.includes("smt 1") || cell.includes("semester 1"))) {
+    if (rowStr.some(cell => cell.includes("smt") || cell.includes("sem") || cell.includes("semester") || cell.includes("smtr"))) {
       smtRowIdx = i;
       break;
     }
@@ -184,8 +196,8 @@ export function parseLegerExcel(arrayBuffer: ArrayBuffer): {
 
     let totalSum = 0;
     let validSubjectCount = 0;
-    const trenValuesSmt1: number[] = [];
-    const trenValuesSmt3: number[] = [];
+    let totalTrendDiff = 0;
+    let trendSubjectCount = 0;
 
     mapelList.forEach(m => {
       const info = subjectCols[m];
@@ -212,13 +224,15 @@ export function parseLegerExcel(arrayBuffer: ArrayBuffer): {
         validSubjectCount++;
       }
 
-      // Track Smt1 and Smt3 values for Tren calculation
-      if (info.smt1 !== undefined && info.smt3 !== undefined) {
-        const s1 = parseFloat(row[info.smt1]);
-        const s3 = parseFloat(row[info.smt3]);
-        if (!isNaN(s1) && !isNaN(s3)) {
-          trenValuesSmt1.push(s1);
-          trenValuesSmt3.push(s3);
+      // Track learning trend dynamically between the last and the first semester recorded
+      if (info.semesters && info.semesters.length >= 2) {
+        const firstCol = info.semesters[0];
+        const lastCol = info.semesters[info.semesters.length - 1];
+        const s1 = parseFloat(row[firstCol]);
+        const s2 = parseFloat(row[lastCol]);
+        if (!isNaN(s1) && !isNaN(s2)) {
+          totalTrendDiff += (s2 - s1);
+          trendSubjectCount++;
         }
       }
     });
@@ -226,11 +240,9 @@ export function parseLegerExcel(arrayBuffer: ArrayBuffer): {
     student["Total Nilai"] = parseFloat(totalSum.toFixed(2));
     student["Rata-rata"] = validSubjectCount > 0 ? parseFloat((totalSum / validSubjectCount).toFixed(2)) : 0;
 
-    // Tren calculation (Smt3 - Smt1 average diff)
-    if (trenValuesSmt1.length > 0 && trenValuesSmt3.length > 0) {
-      const avgS1 = trenValuesSmt1.reduce((a, b) => a + b, 0) / trenValuesSmt1.length;
-      const avgS3 = trenValuesSmt3.reduce((a, b) => a + b, 0) / trenValuesSmt3.length;
-      student["Tren_Belajar"] = parseFloat((avgS3 - avgS1).toFixed(2));
+    // Tren calculation (Generic average difference of late vs early semesters)
+    if (trendSubjectCount > 0) {
+      student["Tren_Belajar"] = parseFloat((totalTrendDiff / trendSubjectCount).toFixed(2));
     } else {
       student["Tren_Belajar"] = 0;
     }
